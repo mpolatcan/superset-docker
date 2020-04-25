@@ -1,0 +1,6 @@
+pytest-runner
+email-validator
+apache-superset[cors]
+redis
+pylibmc
+flower
