@@ -73,7 +73,7 @@ function apply_default_ports_ifnotdef() {
 
 function run_healthchecks() {
   health_checker "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_TYPE}" "${METADATA_DB_HOST}" "${METADATA_DB_PORT}"
-  health_checker "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_TYPE}" "${CELERY_BROKER_HOST}" "${CELERY_BROKER_PORT}"
+  #health_checker "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_TYPE}" "${CELERY_BROKER_HOST}" "${CELERY_BROKER_PORT}"
 }
 
 function init_superset() {
@@ -117,6 +117,8 @@ function main() {
     apply_default_ports_ifnotdef
 
     run_healthchecks
+
+    init_superset
 
     run_superset_webserver
 }
