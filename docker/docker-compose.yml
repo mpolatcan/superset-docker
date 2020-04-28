@@ -1,14 +1,16 @@
 version: "3.5"
 services:
   superset:
-    image: mpolatcan/superset
+    image: mpolatcan/superset:dev
     container_name: superset
     hostname: superset
+    entrypoint: sleep infinity
     environment:
       - METADATA_DB_TYPE=postgresql
       - METADATA_DB_HOST=postgres
-      #- METADATA_DB_PORT=5432
+      - METADATA_DB_PORT=5432
       - SUPERSET_MAX_RETRY_TIMES=-1
+      - FEATURE_FLAG_SIP_38_VIZ_REARCHITECTURE=True
     ports:
       - 8088:8088
 

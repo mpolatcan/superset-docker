@@ -67,7 +67,7 @@ function apply_default_ports_ifnotdef() {
 
     if [[ "${CELERY_BROKER_PORT}" == "NULL" ]]; then
       __log__ "Superset broker port is not defined. Default port \"${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}\" will be used!"
-      export CELERY_BROKER_PORT=${__SERVICE_PORTS__[${CELERY_BROKER_TYPE]}}
+      export CELERY_BROKER_PORT=${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}
     fi
 }
 
@@ -76,8 +76,9 @@ function run_healthchecks() {
   health_checker "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_TYPE}" "${CELERY_BROKER_HOST}" "${CELERY_BROKER_PORT}"
 }
 
-function run_superset() {
-   # Initialize Superset application database
+function init_superset() {
+  __log__ "Upgrading metadata database..."
+
   superset db upgrade
 
   export FLASK_APP=superset
@@ -96,11 +97,19 @@ function run_superset() {
 
   __log__ "Initializing Superset..."
   superset init
+}
 
-  __log__ "Running Superset..."
+function run_superset_webserver() {
+  __log__ "Running Superset webserver..."
+
   superset run --host 0.0.0.0 --port 8088 --with-threads --reload --debugger
 }
 
+function run_celery_worker() {
+  __log__ "Running Celery worker..."
+
+  celery worker --app=superset.tasks.celery_app:app --pool=prefork -0 fair -c 4
+}
 
 function main() {
     check_hosts_defined
@@ -109,7 +118,7 @@ function main() {
 
     run_healthchecks
 
-    run_superset
+    run_superset_webserver
 }
 
 main
