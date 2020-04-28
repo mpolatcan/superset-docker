@@ -21,7 +21,7 @@ def get_env(env_var, result_type: type = str):
     elif result_type == bool:
         return str(value).lower() == "true" if value != "NULL" else False
     elif result_type == list:
-        return value.split(",") if value == "NULL" else []
+        return value.split(",") if value != "NULL" else []
     else:
         return value if value != "NULL" else ""
 
