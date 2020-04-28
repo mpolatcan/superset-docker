@@ -4,18 +4,13 @@ services:
     image: mpolatcan/superset
     container_name: superset
     hostname: superset
-    entrypoint: sleep infinity
     environment:
-      - CACHE_CONFIG_CACHE_TYPE=simple
-      - TABLE_NAMES_CACHE_CONFIG_CACHE_TYPE=simple
-      - THUMBNAIL_CACHE_CONFIG_CACHE_TYPE=simple
-      - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://admin:admin@postgres:5432/admin
-      - SQLALCHEMY_EXAMPLES_URI=postgresql+psycopg2://admin:admin@postgres:5432/admin
-      - LOAD_EXAMPLES=true
+      - METADATA_DB_TYPE=postgresql
+      - METADATA_DB_HOST=postgres
+      #- METADATA_DB_PORT=5432
+      - SUPERSET_MAX_RETRY_TIMES=-1
     ports:
       - 8088:8088
-    depends_on:
-      - postgres
 
   postgres:
     image: postgres
