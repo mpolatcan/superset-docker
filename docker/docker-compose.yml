@@ -9,6 +9,8 @@ services:
       - METADATA_DB_TYPE=postgresql
       - METADATA_DB_HOST=postgres
       - METADATA_DB_PORT=5432
+      - METADATA_DB_USERNAME=admin
+      - METADATA_DB_PASSWORD=admin
       - SUPERSET_MAX_RETRY_TIMES=-1
       - FEATURE_FLAG_SIP_38_VIZ_REARCHITECTURE=True
     ports:

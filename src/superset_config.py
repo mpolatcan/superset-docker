@@ -16,17 +16,14 @@ BROKER_DEFAULT_PORTS = {"redis": 6379, "rabbitmq": 5672}
 def get_env(env_var, result_type: type = str):
     value = environ[env_var]
 
-    if value != "NULL":
-        if result_type == int:
-            return int(value)
-        elif result_type == bool:
-            return str(value).lower() == "true"
-        elif result_type == list:
-            return value.split(",")
-        else:
-            return value
+    if result_type == int:
+        return int(value) if value != "NULL" else None
+    elif result_type == bool:
+        return str(value).lower() == "true" if value != "NULL" else False
+    elif result_type == list:
+        return value.split(",") if value == "NULL" else []
     else:
-        return None
+        return value if value != "NULL" else ""
 
 
 def get_cache_config(env_var_prefix):
@@ -173,10 +170,6 @@ CORS_OPTIONS = {
 # ------------------------------------------------------
 CSV_TO_HIVE_UPLOAD_S3_BUCKET = get_env("CSV_TO_HIVE_UPLOAD_S3_BUCKET")
 CSV_TO_HIVE_UPLOAD_DIRECTORY = get_env("CSV_TO_HIVE_UPLOAD_DIRECTORY")
-# ------------------------------------------------------
-
-# ------------------------------------------------------
-CUSTOM_SECURITY_MANAGER = get_env("CUSTOM_SECURITY_MANAGER")
 # ------------------------------------------------------
 
 # ------------------------------------------------------
