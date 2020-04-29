@@ -146,6 +146,8 @@ function main() {
             ${__SUPERSET_DAEMONS__[$daemon]} &
           fi
         done
+
+        tail -f /dev/null
     else
       __log__ "Any Superset daemons not defined. Exiting..."
     fi
