@@ -3,10 +3,17 @@
 # TODO Healthcheck for result backend
 
 declare -A __SERVICE_PORTS__
+declare -A __SUPERSET_DAEMONS__
+
 __SERVICE_PORTS__[postgresql]="5432"
 __SERVICE_PORTS__[mysql]="3306"
 __SERVICE_PORTS__[redis]="6379"
 __SERVICE_PORTS__[rabbitmq]="5672"
+
+__SUPERSET_DAEMONS__[worker]=run_celery_worker
+__SUPERSET_DAEMONS__[webserver]=run_superset_webserver
+__SUPERSET_DAEMONS__[init]=init_superset
+
 SUPERSET_COMPONENT_METADATA_DATABASE="metadata_database"
 SUPERSET_COMPONENT_BROKER="broker"
 SUPERSET_COMPONENT_BROKER_RESULT_BACKEND="broker_result_backend"
@@ -20,7 +27,7 @@ function __log__() {
 # $2: Service type
 # $3: Service hostname
 # $4: Service port
-function health_checker() {
+function __health_checker__() {
   __log__ "Superset $1 healtcheck started ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")..."
   nc -z $3 $4
   result=$?
@@ -55,10 +62,6 @@ function __host_checker__() {
   fi
 }
 
-function check_hosts_defined() {
-  __host_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_HOST}"
-}
-
 function apply_default_ports_ifnotdef() {
     if [[ "${METADATA_DB_PORT}" == "NULL" ]]; then
       __log__ "Superset metadata database port is not defined. Default port \"${__SERVICE_PORTS__[${METADATA_DB_TYPE}]}\" will be used!"
@@ -69,11 +72,6 @@ function apply_default_ports_ifnotdef() {
       __log__ "Superset broker port is not defined. Default port \"${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}\" will be used!"
       export CELERY_BROKER_PORT=${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}
     fi
-}
-
-function run_healthchecks() {
-  health_checker "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_TYPE}" "${METADATA_DB_HOST}" "${METADATA_DB_PORT}"
-  #health_checker "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_TYPE}" "${CELERY_BROKER_HOST}" "${CELERY_BROKER_PORT}"
 }
 
 function init_superset() {
@@ -99,6 +97,24 @@ function init_superset() {
   superset init
 }
 
+# $1: daemon
+function check_hosts_defined() {
+  __host_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_HOST}"
+
+  if [[ "$1" == "worker" ]]; then
+    __host_checker__ "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_HOST}"
+  fi
+}
+
+# $1: daemon
+function run_healthchecks() {
+  __health_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_TYPE}" "${METADATA_DB_HOST}" "${METADATA_DB_PORT}"
+
+  if [[ "$1" == "worker" ]]; then
+    __health_checker__ "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_TYPE}" "${CELERY_BROKER_HOST}" "${CELERY_BROKER_PORT}"
+  fi
+}
+
 function run_superset_webserver() {
   __log__ "Running Superset webserver..."
 
@@ -112,15 +128,19 @@ function run_celery_worker() {
 }
 
 function main() {
-    check_hosts_defined
-
     apply_default_ports_ifnotdef
 
-    run_healthchecks
+    if [[ "${SUPERSET_DAEMONS}" != "NULL" ]]; then
+        for daemon in ${SUPERSET_DAEMONS[@]}; do
+          check_hosts_defined $daemon
 
-    init_superset
+          run_healthchecks $daemon
 
-    run_superset_webserver
+          ${__SUPERSET_DAEMONS__[$daemon]}
+        done
+    else
+      __log__ "Any Superset daemons not defined. Exiting..."
+    fi
 }
 
 main

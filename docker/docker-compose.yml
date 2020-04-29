@@ -4,7 +4,6 @@ services:
     image: mpolatcan/superset:dev
     container_name: superset
     hostname: superset
-    entrypoint: sleep infinity
     environment:
       - METADATA_DB_TYPE=postgresql
       - METADATA_DB_HOST=postgres
@@ -13,7 +12,9 @@ services:
       - METADATA_DB_PASSWORD=admin
       - METADATA_DB_DATABASE=admin
       - SUPERSET_MAX_RETRY_TIMES=-1
-      - FEATURE_FLAG_SIP_38_VIZ_REARCHITECTURE=False
+      - FEATURE_FLAG_SIP_38_VIZ_REARCHITECTURE=True
+      - FEATURE_FLAG_LIST_VIEWS_NEW_UI=True
+      - LOAD_EXAMPLES=true
     ports:
       - 8088:8088
 
