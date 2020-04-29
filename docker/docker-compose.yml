@@ -1,29 +1,54 @@
 version: "3.5"
 services:
-  superset:
+  superset-webserver:
     image: mpolatcan/superset:dev
-    container_name: superset
-    hostname: superset
+    container_name: superset-webserver
+    hostname: superset-webserver
     environment:
-      - METADATA_DB_TYPE=postgresql
-      - METADATA_DB_HOST=postgres
-      - METADATA_DB_PORT=5432
-      - METADATA_DB_USERNAME=admin
-      - METADATA_DB_PASSWORD=admin
-      - METADATA_DB_DATABASE=admin
-      - SUPERSET_MAX_RETRY_TIMES=-1
-      - FEATURE_FLAG_SIP_38_VIZ_REARCHITECTURE=True
-      - FEATURE_FLAG_LIST_VIEWS_NEW_UI=True
-      - LOAD_EXAMPLES=true
+      SUPERSET_DAEMONS: |
+        init
+        webserver
+      METADATA_DB_TYPE: "postgresql"
+      METADATA_DB_HOST: "postgres"
+      METADATA_DB_PORT: "5432"
+      METADATA_DB_USERNAME: "admin"
+      METADATA_DB_PASSWORD: "admin"
+      METADATA_DB_DATABASE: "admin"
+      SUPERSET_MAX_RETRY_TIMES: "-1"
+      LOAD_EXAMPLES: "True"
     ports:
       - 8088:8088
+
+  superset-worker:
+    image: mpolatcan/superset:dev
+    environment:
+      SUPERSET_DAEMONS: |
+        worker
+      METADATA_DB_TYPE: "postgresql"
+      METADATA_DB_HOST: "postgres"
+      METADATA_DB_PORT: "5432"
+      METADATA_DB_USERNAME: "admin"
+      METADATA_DB_PASSWORD: "admin"
+      METADATA_DB_DATABASE: "admin"
+      SUPERSET_MAX_RETRY_TIMES: "-1"
+      CELERY_BROKER_TYPE: "redis"
+      CELERY_BROKER_HOST: "redis"
+      CELERY_BROKER_PORT: "6379"
+      CELERY_BROKER_DATABASE: "0"
 
   postgres:
     image: postgres
     container_name: postgres
     hostname: postgres
     environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "admin"
     ports:
       - 5432:5432
+
+  redis:
+    image: redis
+    container_name: redis
+    hostname: redis
+    ports:
+      - 6379:6379

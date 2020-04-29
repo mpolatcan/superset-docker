@@ -99,7 +99,9 @@ function init_superset() {
 
 # $1: daemon
 function check_hosts_defined() {
-  __host_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_HOST}"
+  if [[ "$1" == "webserver" || "$1" == "init" ]]; then
+    __host_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_HOST}"
+  fi
 
   if [[ "$1" == "worker" ]]; then
     __host_checker__ "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_HOST}"
@@ -108,7 +110,9 @@ function check_hosts_defined() {
 
 # $1: daemon
 function run_healthchecks() {
-  __health_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_TYPE}" "${METADATA_DB_HOST}" "${METADATA_DB_PORT}"
+  if [[ "$1" == "webserver" || "$1" == "init" ]]; then
+    __health_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_TYPE}" "${METADATA_DB_HOST}" "${METADATA_DB_PORT}"
+  fi
 
   if [[ "$1" == "worker" ]]; then
     __health_checker__ "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_TYPE}" "${CELERY_BROKER_HOST}" "${CELERY_BROKER_PORT}"
@@ -124,7 +128,7 @@ function run_superset_webserver() {
 function run_celery_worker() {
   __log__ "Running Celery worker..."
 
-  celery worker --app=superset.tasks.celery_app:app --pool=prefork -0 fair -c 4
+  celery worker --app=superset.tasks.celery_app:app --pool=prefork -O fair -c 4
 }
 
 function main() {
@@ -136,7 +140,11 @@ function main() {
 
           run_healthchecks $daemon
 
-          ${__SUPERSET_DAEMONS__[$daemon]}
+          if [[ "$daemon" == "init" ]]; then
+            ${__SUPERSET_DAEMONS__[$daemon]}
+          else
+            ${__SUPERSET_DAEMONS__[$daemon]} &
+          fi
         done
     else
       __log__ "Any Superset daemons not defined. Exiting..."
