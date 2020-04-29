@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# TODO Healthcheck for result backend
-
 declare -A __SERVICE_PORTS__
 declare -A __SUPERSET_DAEMONS__
 
@@ -9,6 +7,7 @@ __SERVICE_PORTS__[postgresql]="5432"
 __SERVICE_PORTS__[mysql]="3306"
 __SERVICE_PORTS__[redis]="6379"
 __SERVICE_PORTS__[rabbitmq]="5672"
+__SERVICE_PORTS__[memcached]="11211"
 
 __SUPERSET_DAEMONS__[worker]=run_celery_worker
 __SUPERSET_DAEMONS__[webserver]=run_superset_webserver
@@ -16,7 +15,7 @@ __SUPERSET_DAEMONS__[init]=init_superset
 
 SUPERSET_COMPONENT_METADATA_DATABASE="metadata_database"
 SUPERSET_COMPONENT_BROKER="broker"
-SUPERSET_COMPONENT_BROKER_RESULT_BACKEND="broker_result_backend"
+SUPERSET_COMPONENT_RESULTS_BACKEND="results_backend"
 
 # $1: message
 function __log__() {
@@ -54,45 +53,57 @@ function __health_checker__() {
 # $1: Service name
 # $2: Service host
 function __host_checker__() {
-  if [[ "$2" == "" ]]; then
-    __log__ "Superset $1 host is not defined. Exiting ✘..."
-    exit 1
+  if [[ "$2" == "NULL" ]]; then
+      __log__ "Superset $1 host is not defined. Exiting ✘..."
+      exit 1
   else
-    __log__ "Superset $1 host is $2. OK ✔"
+      __log__ "Superset $1 host is $2. OK ✔"
   fi
 }
 
 function apply_default_ports_ifnotdef() {
     if [[ "${METADATA_DB_PORT}" == "NULL" ]]; then
-      __log__ "Superset metadata database port is not defined. Default port \"${__SERVICE_PORTS__[${METADATA_DB_TYPE}]}\" will be used!"
-      export METADATA_DB_PORT=${__SERVICE_PORTS__[${METADATA_DB_TYPE}]}
+        __log__ "Superset metadata database port is not defined. Default port \"${__SERVICE_PORTS__[${METADATA_DB_TYPE}]}\" will be used!"
+        export METADATA_DB_PORT=${__SERVICE_PORTS__[${METADATA_DB_TYPE}]}
     fi
 
     if [[ "${CELERY_BROKER_PORT}" == "NULL" ]]; then
-      __log__ "Superset broker port is not defined. Default port \"${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}\" will be used!"
-      export CELERY_BROKER_PORT=${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}
+        __log__ "Superset broker port is not defined. Default port \"${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}\" will be used!"
+        export CELERY_BROKER_PORT=${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}
     fi
 }
 
 # $1: daemon
 function check_hosts_defined() {
-  if [[ "$1" == "webserver" || "$1" == "init" ]]; then
-    __host_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_HOST}"
-  fi
+  __host_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_HOST}"
 
-  if [[ "$1" == "worker" ]]; then
-    __host_checker__ "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_HOST}"
+  if [[ "${SUPERSET_DEPLOY_MODE}" == "production" ]]; then
+      __host_checker__ "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_HOST}"
+
+      if [[ "${RESULTS_BACKEND_TYPE}" == "redis" ]]; then
+          __host_checker__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "${RESULTS_BACKEND_REDIS_HOST}"
+      elif [[ "${RESULTS_BACKEND_TYPE}" == "memcached" ]]; then
+          __host_checker__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "${RESULTS_BACKEND_MEMCACHED_SERVERS}"
+      fi
   fi
 }
 
 # $1: daemon
 function run_healthchecks() {
-  if [[ "$1" == "webserver" || "$1" == "init" ]]; then
-    __health_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_TYPE}" "${METADATA_DB_HOST}" "${METADATA_DB_PORT}"
-  fi
+  __health_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" "${METADATA_DB_TYPE}" "${METADATA_DB_HOST}" "${METADATA_DB_PORT}"
 
-  if [[ "$1" == "worker" ]]; then
-    __health_checker__ "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_TYPE}" "${CELERY_BROKER_HOST}" "${CELERY_BROKER_PORT}"
+  if [[ "${SUPERSET_DEPLOY_MODE}" == "production" ]]; then
+      __health_checker__ "${SUPERSET_COMPONENT_BROKER}" "${CELERY_BROKER_TYPE}" "${CELERY_BROKER_HOST}" "${CELERY_BROKER_PORT}"
+
+      if [[ "${RESULTS_BACKEND_TYPE}" == "redis" ]]; then
+          __health_checker__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "${RESULTS_BACKEND_TYPE}" "${RESULTS_BACKEND_REDIS_HOST}" "${RESULTS_BACKEND_REDIS_PORT}"
+      elif [[ "${RESULTS_BACKEND_TYPE}" == "memcached" ]]; then
+          IFS="," read -r -a MEMCACHED_SERVERS <<< "${RESULTS_BACKEND_MEMCACHED_SERVERS}"
+
+          for server in ${MEMCACHED_SERVERS[@]}; do
+              __health_checker__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "${RESULTS_BACKEND_TYPE}" "$server" "${__SERVICE_PORTS__[memcached]}"
+          done
+      fi
   fi
 }
 
@@ -134,12 +145,12 @@ function run_celery_worker() {
 function main() {
     apply_default_ports_ifnotdef
 
+    check_hosts_defined
+
+    run_healthchecks
+
     if [[ "${SUPERSET_DAEMONS}" != "NULL" ]]; then
         for daemon in ${SUPERSET_DAEMONS[@]}; do
-          check_hosts_defined $daemon
-
-          run_healthchecks $daemon
-
           if [[ "$daemon" == "init" ]]; then
             ${__SUPERSET_DAEMONS__[$daemon]}
           else

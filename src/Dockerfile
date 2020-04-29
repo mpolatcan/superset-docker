@@ -6,6 +6,7 @@ ENV SUPERSET_HOME="/superset"
 ENV SUPERSET_VIRTUALENV="${SUPERSET_HOME}/venv"\
     SUPERSET_CONFIG_PATH="${SUPERSET_HOME}/superset_config.py" \
     SUPERSET_DAEMONS="NULL" \
+    SUPERSET_DEPLOY_MODE="development"
     ADMIN_USERNAME="admin" \
     ADMIN_FIRSTNAME="Admin" \
     ADMIN_LASTNAME="User" \
