@@ -62,13 +62,14 @@ function __host_checker__() {
   fi
 }
 
+# $1: daemon
 function apply_default_ports_ifnotdef() {
-    if [[ "${METADATA_DB_PORT}" == "NULL" ]]; then
+    if [[ "${METADATA_DB_PORT}" == "NULL" && "$1" == "webserver" ]]; then
       __log__ "Superset metadata database port is not defined. Default port \"${__SERVICE_PORTS__[${METADATA_DB_TYPE}]}\" will be used!"
       export METADATA_DB_PORT=${__SERVICE_PORTS__[${METADATA_DB_TYPE}]}
     fi
 
-    if [[ "${CELERY_BROKER_PORT}" == "NULL" ]]; then
+    if [[ "${CELERY_BROKER_PORT}" == "NULL" && "$1" == "worker" ]]; then
       __log__ "Superset broker port is not defined. Default port \"${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}\" will be used!"
       export CELERY_BROKER_PORT=${__SERVICE_PORTS__[${CELERY_BROKER_TYPE}]}
     fi
@@ -132,10 +133,11 @@ function run_celery_worker() {
 }
 
 function main() {
-    apply_default_ports_ifnotdef
 
     if [[ "${SUPERSET_DAEMONS}" != "NULL" ]]; then
         for daemon in ${SUPERSET_DAEMONS[@]}; do
+          apply_default_ports_ifnotdef $daemon
+
           check_hosts_defined $daemon
 
           run_healthchecks $daemon
