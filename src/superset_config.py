@@ -103,18 +103,14 @@ def get_results_backend_uri():
             password = get_env("RESULTS_BACKEND_REDIS_PASSWORD")
             db = get_env("RESULTS_BACKEND_REDIS_DB")
 
-            return "{prefix}//{password}{host}:{port}/{db}".format(
-                prefix=RESULTS_BACKEND_PREFIXES[backend_type],
-                password="{}@".format(password) if password else "",
-                host=host,
-                port=port,
-                db=db
-            )
+            return "{prefix}://{password}{host}:{port}/{db}".format(prefix=RESULTS_BACKEND_PREFIXES[backend_type],
+                                                                    password="{}@".format(password) if password else "",
+                                                                    host=host,
+                                                                    port=port,
+                                                                    db=db)
         elif backend_type == "memcached":
-            return "{prefix}://{servers}/".format(
-                prefix=RESULTS_BACKEND_PREFIXES[backend_type],
-                servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", var_type=list))
-            )
+            return "{prefix}://{servers}/".format(prefix=RESULTS_BACKEND_PREFIXES[backend_type],
+                                                  servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", var_type=list)))
 
 
 def get_db_or_broker_uri(env_var_prefix, default_prefixes, default_ports):
