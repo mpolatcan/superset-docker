@@ -1,5 +1,6 @@
 # TODO Write environment variables list to Markdown
-
+# TODO Caching configuration will be fixed
+# TODO Memcached and S3 result backend will be added
 from dateutil import tz
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_LDAP, AUTH_OID, AUTH_REMOTE_USER
 from os import environ
@@ -11,6 +12,9 @@ METADATA_DB_PREFIXES = {"postgresql": "postgresql+psycopg2", "mysql": "mysql", "
 METADATA_DB_DEFAULT_PORTS = {"postgresql": 5432, "mysql": 3306}
 BROKER_PREFIXES = {"redis": "redis", "rabbitmq": "pyamqp"}
 BROKER_DEFAULT_PORTS = {"redis": 6379, "rabbitmq": 5672}
+RESULT_BACKEND_PREFIXES = {
+    "redis": "redis", "memcached": "cache+memcached"
+}
 
 
 def get_env(env_var, default_value=None, var_type: type = str):

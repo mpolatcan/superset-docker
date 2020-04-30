@@ -7,7 +7,6 @@ __SERVICE_PORTS__[postgresql]="5432"
 __SERVICE_PORTS__[mysql]="3306"
 __SERVICE_PORTS__[redis]="6379"
 __SERVICE_PORTS__[rabbitmq]="5672"
-__SERVICE_PORTS__[memcached]="11211"
 
 __SUPERSET_DAEMONS__[worker]=run_celery_worker
 __SUPERSET_DAEMONS__[webserver]=run_superset_webserver
@@ -101,7 +100,9 @@ function run_healthchecks() {
           IFS="," read -r -a MEMCACHED_SERVERS <<< "${RESULTS_BACKEND_MEMCACHED_SERVERS}"
 
           for server in ${MEMCACHED_SERVERS[@]}; do
-              __health_checker__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "${RESULTS_BACKEND_TYPE}" "$server" "${__SERVICE_PORTS__[memcached]}"
+              IFS=":" read -r -a SERVER_INFO <<< $server
+
+              __health_checker__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "${RESULTS_BACKEND_TYPE}" $SERVER_INFO[0] $SERVER_INFO[1]
           done
       fi
   fi
@@ -139,7 +140,7 @@ function run_superset_webserver() {
 function run_celery_worker() {
   __log__ "Running Celery worker..."
 
-  celery worker --app=superset.tasks.celery_app:app --pool=prefork -O fair -c 4
+  celery worker --app=superset.tasks.celery_app:app --pool=${CELERY_BROKER_POOL_TYPE} -O fair -c ${CELERY_BROKER_CONCURRENCY} -E
 }
 
 function main() {
