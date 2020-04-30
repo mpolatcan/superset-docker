@@ -102,7 +102,7 @@ function run_healthchecks() {
           for server in ${MEMCACHED_SERVERS[@]}; do
               IFS=":" read -r -a SERVER_INFO <<< $server
 
-              __health_checker__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "${RESULTS_BACKEND_TYPE}" $SERVER_INFO[0] $SERVER_INFO[1]
+              __health_checker__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "${RESULTS_BACKEND_TYPE}" ${SERVER_INFO[0]} ${SERVER_INFO[1]}
           done
       fi
   fi
