@@ -1,6 +1,5 @@
 # TODO Write environment variables list to Markdown
-# TODO Caching configuration will be fixed
-# TODO Memcached and S3 result backend will be added
+# TODO S3 result backend will be added
 from dateutil import tz
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_LDAP, AUTH_OID, AUTH_REMOTE_USER
 from os import environ
@@ -12,9 +11,7 @@ METADATA_DB_PREFIXES = {"postgresql": "postgresql+psycopg2", "mysql": "mysql", "
 METADATA_DB_DEFAULT_PORTS = {"postgresql": 5432, "mysql": 3306}
 BROKER_PREFIXES = {"redis": "redis", "rabbitmq": "pyamqp"}
 BROKER_DEFAULT_PORTS = {"redis": 6379, "rabbitmq": 5672}
-RESULT_BACKEND_PREFIXES = {
-    "redis": "redis", "memcached": "cache+memcached"
-}
+RESULTS_BACKEND_PREFIXES = {"redis": "redis", "memcached": "cache+memcached"}
 
 
 def get_env(env_var, default_value=None, var_type: type = str):
@@ -52,10 +49,15 @@ def get_cache_config(env_var_prefix):
     set_config(cache_config, "CACHE_REDIS_PASSWORD")
     set_config(cache_config, "CACHE_REDIS_DB", int)
     set_config(cache_config, "CACHE_DIR")
-    cache_config["CACHE_REDIS_URL"] = "redis://{}@{}:{}/{}".format(cache_config.get("CACHE_REDIS_PASSWORD", ""),
-                                                                   cache_config.get("CACHE_REDIS_HOST", ""),
-                                                                   cache_config.get("CACHE_REDIS_PORT", ""),
-                                                                   cache_config.get("CACHE_REDIS_DB", ""))
+
+    if cache_config["CACHE_TYPE"] == "redis":
+        redis_password = cache_config.get("CACHE_REDIS_PASSWORD", None)
+        cache_config["CACHE_REDIS_URL"] = "redis://{password}{host}:{port}/{db}".format(
+            password="{}@".format(redis_password) if redis_password else "",
+            host=cache_config.get("CACHE_REDIS_HOST", ""),
+            port=cache_config.get("CACHE_REDIS_PORT", ""),
+            db=cache_config.get("CACHE_REDIS_DB", "")
+        )
 
     return cache_config
 
@@ -87,6 +89,32 @@ def get_results_backend():
         return None
 
 
+def get_results_backend_uri():
+    backend_type = get_env("RESULTS_BACKEND_TYPE")
+
+    if backend_type not in RESULTS_BACKEND_PREFIXES.keys():
+        raise Exception("Wrong result backend type \"{}\"".format(backend_type))
+    else:
+        if backend_type == "redis":
+            host = get_env("RESULTS_BACKEND_REDIS_HOST")
+            port = get_env("RESULTS_BACKEND_REDIS_PORT")
+            password = get_env("RESULTS_BACKEND_REDIS_PASSWORD")
+            db = get_env("RESULTS_BACKEND_REDIS_DB")
+
+            return "{prefix}//{password}{host}:{port}/{db}".format(
+                prefix=RESULTS_BACKEND_PREFIXES[backend_type],
+                password="{}@".format(password) if password else "",
+                host=host,
+                port=port,
+                db=db
+            )
+        elif backend_type == "memcached":
+            return "{prefix}://{servers}/".format(
+                prefix=RESULTS_BACKEND_PREFIXES[backend_type],
+                servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", var_type=list))
+            )
+
+
 def get_db_or_broker_uri(env_var_prefix, default_prefixes, default_ports):
     type = get_env("{}_TYPE".format(env_var_prefix))
     username = get_env("{}_USERNAME".format(env_var_prefix))
@@ -101,10 +129,15 @@ def get_db_or_broker_uri(env_var_prefix, default_prefixes, default_ports):
 
     if type not in default_prefixes.keys():
         raise Exception("Wrong type \"{}\"".format(type))
-    elif username and password:
-        return "{}://{}:{}@{}:{}/{}".format(default_prefixes.get(type, None), username, password, host, port, db)
     else:
-        return "{}://{}:{}/{}".format(default_prefixes.get(type, None), host, port, db)
+        return "{prefix}://{username}{password}{host}:{port}/{db}".format(
+            prefix=default_prefixes[type],
+            username="{}{}".format(username, ":" if password else "@") if username else "",
+            password="{}@".format(password) if password else "",
+            host=host,
+            port=port,
+            db=db
+        )
 
 
 # ------------------------------------------------------
@@ -140,7 +173,7 @@ CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", int)
 class CeleryConfig:
     BROKER_URL = get_db_or_broker_uri("CELERY_BROKER", BROKER_PREFIXES, BROKER_DEFAULT_PORTS)
     CELERY_IMPORTS = ("superset.sql_lab", "superset.tasks")
-    CELERY_RESULT_BACKEND = get_db_or_broker_uri("CELERY_BROKER", BROKER_PREFIXES, BROKER_DEFAULT_PORTS)
+    CELERY_RESULT_BACKEND = get_results_backend_uri()
     CELERYD_LOG_LEVEL = get_env("CELERYD_LOG_LEVEL")
     CELERY_ACKS_LATE = get_env("CELERY_ACKS_LATE", var_type=bool)
     CELERY_ANNOTATIONS = {

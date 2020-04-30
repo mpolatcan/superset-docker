@@ -5,7 +5,7 @@ services:
     container_name: superset-webserver
     hostname: superset-webserver
     env_file:
-      - prod_redis.env
+      - prod-redis.env
     environment:
       SUPERSET_DAEMONS: |
         init
@@ -16,7 +16,7 @@ services:
   superset-worker:
     image: mpolatcan/superset:dev
     env_file:
-      - prod_redis.env
+      - prod-redis.env
     environment:
       SUPERSET_DAEMONS: |
         worker

@@ -1,1 +1,44 @@
-# TODO Implement memcached production setup
+version: "3.5"
+services:
+  superset-webserver:
+    image: mpolatcan/superset:dev
+    container_name: superset-webserver
+    hostname: superset-webserver
+    env_file:
+      - prod-memcached.env
+    environment:
+      SUPERSET_DAEMONS: |
+        init
+        webserver
+    ports:
+      - 8088:8088
+
+  superset-worker:
+    image: mpolatcan/superset:dev
+    env_file:
+      - prod-memcached.env
+    environment:
+      SUPERSET_DAEMONS: |
+        worker
+
+  postgres:
+    image: postgres
+    container_name: postgres
+    hostname: postgres
+    environment:
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "admin"
+    ports:
+      - 5432:5432
+
+  redis:
+    image: redis
+    container_name: redis
+    hostname: redis
+    ports:
+      - 6379:6379
+
+  memcached:
+    image: memcached
+    ports:
+      - 11211
