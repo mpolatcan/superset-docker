@@ -39,17 +39,17 @@ def get_cache_config(env_var_prefix):
     cache_config = {}
 
     set_config(cache_config, "CACHE_TYPE")
-    set_config(cache_config, "CACHE_NO_NULL_WARNING")
-    set_config(cache_config, "CACHE_DEFAULT_TIMEOUT")
-    set_config(cache_config, "CACHE_THRESHOLD")
+    set_config(cache_config, "CACHE_NO_NULL_WARNING", var_type=bool)
+    set_config(cache_config, "CACHE_DEFAULT_TIMEOUT", var_type=int)
+    set_config(cache_config, "CACHE_THRESHOLD", var_type=int)
     set_config(cache_config, "CACHE_KEY_PREFIX")
     set_config(cache_config, "CACHE_MEMCACHED_SERVERS")
     set_config(cache_config, "CACHE_MEMCACHED_USERNAME")
     set_config(cache_config, "CACHE_MEMCACHED_PASSWORD")
     set_config(cache_config, "CACHE_REDIS_HOST")
-    set_config(cache_config, "CACHE_REDIS_PORT", int)
+    set_config(cache_config, "CACHE_REDIS_PORT", var_type=int)
     set_config(cache_config, "CACHE_REDIS_PASSWORD")
-    set_config(cache_config, "CACHE_REDIS_DB", int)
+    set_config(cache_config, "CACHE_REDIS_DB", var_type=int)
     set_config(cache_config, "CACHE_DIR")
 
     if cache_config["CACHE_TYPE"] == "redis":
@@ -163,7 +163,7 @@ BUG_REPORT_URL = get_env("BUG_REPORT_URL")
 
 # ------------------------------------------------------
 CACHE_CONFIG = get_cache_config("CACHE_CONFIG")
-CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", int)
+CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", var_type=int)
 # ------------------------------------------------------
 
 
