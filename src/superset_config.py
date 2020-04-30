@@ -19,6 +19,8 @@ def get_env(env_var, default_value=None, var_type: type = str):
 
     if var_type == int:
         return int(value) if value != "NULL" else default_value
+    elif var_type == float:
+        return float(value) if value != "NULL" else default_value
     elif var_type == bool:
         return str(value).lower() == "true" if value != "NULL" else default_value
     elif var_type == list:
