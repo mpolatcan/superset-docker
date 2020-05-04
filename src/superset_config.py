@@ -39,11 +39,11 @@ BROKER_PREFIXES = {"redis": "redis", "rabbitmq": "pyamqp"}
 BROKER_DEFAULT_PORTS = {"redis": 6379, "rabbitmq": 5672}
 
 RESULTS_BACKENDS = {
-    "simple": SimpleCache(
+    "simple": lambda: SimpleCache(
         threshold=get_env("RESULTS_BACKEND_THRESHOLD", default=10, cast=int),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
-    "redis": RedisCache(
+    "redis": lambda: RedisCache(
         host=get_env("RESULTS_BACKEND_REDIS_HOST"),
         port=get_env("RESULTS_BACKEND_REDIS_PORT", default=6379, cast=int),
         password=get_env("RESULTS_BACKEND_REDIS_PASSWORD"),
@@ -51,12 +51,12 @@ RESULTS_BACKENDS = {
         db=get_env("RESULTS_BACKEND_REDIS_DB", default=0, cast=int),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
-    "memcached": MemcachedCache(
+    "memcached": lambda: MemcachedCache(
         servers=get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", cast=list),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
         key_prefix=get_env("RESULTS_BACKEND_MEMCACHED_KEY_PREFIX", default="superset_results")
     ),
-    "filesystem": FileSystemCache(
+    "filesystem": lambda: FileSystemCache(
         cache_dir=get_env("RESULTS_BACKEND_FILESYSTEM_CACHE_DIR"),
         threshold=get_env("RESULTS_BACKEND_THRESHOLD", default=10, cast=int),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
@@ -65,14 +65,14 @@ RESULTS_BACKENDS = {
 }
 
 RESULTS_BACKENDS_URIS = {
-    "redis": "redis://{password}{host}:{port}/{db}".format(
+    "redis": lambda: "redis://{password}{host}:{port}/{db}".format(
         password="{}@".format(get_env("RESULTS_BACKEND_REDIS_PASSWORD"))
                  if get_env("RESULTS_BACKEND_REDIS_PASSWORD") else "",
         host=get_env("RESULTS_BACKEND_REDIS_HOST"),
         port=get_env("RESULTS_BACKEND_REDIS_PORT", default=6379),
         db=get_env("RESULTS_BACKEND_REDIS_DB", default=1)
     ),
-    "memcached": "cache+memcached://{servers}/".format(
+    "memcached": lambda: "cache+memcached://{servers}/".format(
         servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", cast=list))
     )
 }
@@ -169,7 +169,7 @@ CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", default=86400, cast=int
 class CeleryConfig:
     BROKER_URL = get_db_or_broker_uri("CELERY_BROKER", BROKER_PREFIXES, BROKER_DEFAULT_PORTS)
     CELERY_IMPORTS = ("superset.sql_lab", "superset.tasks")
-    CELERY_RESULT_BACKEND = RESULTS_BACKENDS_URIS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), "")
+    CELERY_RESULT_BACKEND = RESULTS_BACKENDS_URIS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), lambda: None)()
     CELERYD_LOG_LEVEL = get_env("CELERYD_LOG_LEVEL", default="DEBUG")
     CELERY_ACKS_LATE = get_env("CELERY_ACKS_LATE", default=False, cast=bool)
     CELERY_ANNOTATIONS = {
@@ -367,7 +367,7 @@ PUBLIC_ROLE_LIKE_GAMMA = get_env("PUBLIC_ROLE_LIKE_GAMMA", default=False, cast=b
 # ------------------------------------------------------
 
 # ------------------------------------------------------
-RESULTS_BACKEND = RESULTS_BACKENDS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), None)
+RESULTS_BACKEND = RESULTS_BACKENDS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), lambda: None)()
 # ------------------------------------------------------
 
 # ------------------------------------------------------
