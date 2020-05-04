@@ -1,9 +1,12 @@
+# Written by Mutlu Polatcan
+# 05.05.2020
 # TODO Write environment variables list to Markdown
 # TODO S3 result backend will be added
+import json
 from os import environ
 from dateutil import tz
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_LDAP, AUTH_OID, AUTH_REMOTE_USER
-from werkzeug.contrib.cache import SimpleCache, MemcachedCache, RedisCache, FileSystemCache
+from werkzeug.contrib.cache import SimpleCache, MemcachedCache, RedisCache
 from celery.schedules import crontab
 
 ENV_VAR_TYPE_CASTER = {
@@ -39,11 +42,11 @@ BROKER_PREFIXES = {"redis": "redis", "rabbitmq": "pyamqp"}
 BROKER_DEFAULT_PORTS = {"redis": 6379, "rabbitmq": 5672}
 
 RESULTS_BACKENDS = {
-    "simple": lambda: SimpleCache(
+    "simple": SimpleCache(
         threshold=get_env("RESULTS_BACKEND_THRESHOLD", default=10, cast=int),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
-    "redis": lambda: RedisCache(
+    "redis": RedisCache(
         host=get_env("RESULTS_BACKEND_REDIS_HOST"),
         port=get_env("RESULTS_BACKEND_REDIS_PORT", default=6379, cast=int),
         password=get_env("RESULTS_BACKEND_REDIS_PASSWORD"),
@@ -51,28 +54,22 @@ RESULTS_BACKENDS = {
         db=get_env("RESULTS_BACKEND_REDIS_DB", default=0, cast=int),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
-    "memcached": lambda: MemcachedCache(
+    "memcached": MemcachedCache(
         servers=get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", cast=list),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
         key_prefix=get_env("RESULTS_BACKEND_MEMCACHED_KEY_PREFIX", default="superset_results")
-    ),
-    "filesystem": lambda: FileSystemCache(
-        cache_dir=get_env("RESULTS_BACKEND_FILESYSTEM_CACHE_DIR"),
-        threshold=get_env("RESULTS_BACKEND_THRESHOLD", default=10, cast=int),
-        default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
-        mode=get_env("RESULTS_BACKEND_FILESYSTEM_MODE", cast=int)
     )
 }
 
 RESULTS_BACKENDS_URIS = {
-    "redis": lambda: "redis://{password}{host}:{port}/{db}".format(
+    "redis": "redis://{password}{host}:{port}/{db}".format(
         password="{}@".format(get_env("RESULTS_BACKEND_REDIS_PASSWORD"))
                  if get_env("RESULTS_BACKEND_REDIS_PASSWORD") else "",
         host=get_env("RESULTS_BACKEND_REDIS_HOST"),
         port=get_env("RESULTS_BACKEND_REDIS_PORT", default=6379),
         db=get_env("RESULTS_BACKEND_REDIS_DB", default=1)
     ),
-    "memcached": lambda: "cache+memcached://{servers}/".format(
+    "memcached": "cache+memcached://{servers}/".format(
         servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", cast=list))
     )
 }
@@ -99,25 +96,27 @@ def get_db_or_broker_uri(env_var_prefix, default_prefixes, default_ports):
 
 def get_cache_config(env_var_prefix):
     def set_config(config_dict, config_key, default=None, cast: type = str):
-        value = get_env("{}_{}".format(env_var_prefix, config_key), default=default, cast=cast)
+        value = get_env(config_key, default=default, cast=cast)
 
         if value:
             config_dict[config_key] = value
 
     cache_config = {}
 
-    for cache_config_info in [
-        ("TYPE", "null", str), ("NO_NULL_WARNING", bool), ("DEFAULT_TIMEOUT", int), ("THRESHOLD", int),
-        ("KEY_PREFIX", str), ("MEMCACHED_SERVERS", str), ("MEMCACHED_SERVERS", str), ("MEMCACHED_PASSWORD", str),
-        ("REDIS_HOST", str), ("REDIS_PORT", 6379, int), ("REDIS_PASSWORD", str), ("REDIS_DB", 0, int), ("DIR", str)
-    ]:
-        set_config(config_dict=cache_config,
-                   config_key="CACHE_{}".format(cache_config_info[0]),
-                   default=cache_config_info[1] if len(cache_config_info) > 2 else None,
-                   cast=cache_config_info[-1])
+    for cache_config_info in [("TYPE", "null", str), ("NO_NULL_WARNING", bool), ("DEFAULT_TIMEOUT", int),
+                              ("THRESHOLD", int), ("KEY_PREFIX", str), ("MEMCACHED_SERVERS", str),
+                              ("MEMCACHED_SERVERS", str), ("MEMCACHED_PASSWORD", str), ("REDIS_HOST", str),
+                              ("REDIS_PORT", 6379, int), ("REDIS_PASSWORD", str), ("REDIS_DB", 0, int), ("DIR", str)]:
+        set_config(
+            config_dict=cache_config,
+            config_key="{}_CACHE_{}".format(env_var_prefix, cache_config_info[0]),
+            default=cache_config_info[1] if len(cache_config_info) > 2 else None,
+            cast=cache_config_info[-1]
+        )
 
     if cache_config["CACHE_TYPE"] == "redis":
         redis_password = cache_config.get("CACHE_REDIS_PASSWORD", None)
+
         cache_config["CACHE_REDIS_URL"] = "redis://{password}{host}:{port}/{db}".format(
             password="{}@".format(redis_password) if redis_password else "",
             host=cache_config.get("CACHE_REDIS_HOST", ""),
@@ -128,12 +127,27 @@ def get_cache_config(env_var_prefix):
     return cache_config
 
 
-# TODO Add scheduled jobs of Superset
-def get_scheduled_jobs():
-    scheduled_jobs = {}
+def get_celery_beat_schedule():
+    celery_beat_schedule = {
+        "email_reports.schedule_hourly": {
+            "task": "email_reports.schedule_hourly",
+            "schedule": crontab(minute=get_env("EMAIL_REPORTS_SCHEDULE_HOURLY_MINUTE", default="1"), hour="*")
+        },
+    }
 
-    if get_env("ENABLE_CACHE_WARMUP", cast=bool):
-        scheduled_jobs["cache-warmup"] = {}
+    if get_env("ENABLE_CACHE_WARMUP", default=False, cast=bool):
+        cache_warmups = json.loads(get_env("CACHE_WARMUPS").replace("\n", "").replace(" ", ""))
+
+        for idx, cache_warmup in enumerate(cache_warmups):
+            cache_warmup_id = "cache-warmup-{}".format(idx)
+
+            celery_beat_schedule[cache_warmup_id] = {
+                "task": "cache-warmup",
+                "schedule": crontab(*cache_warmup["schedule"].split()),
+                "kwargs": cache_warmup["kwargs"]
+            }
+
+    return celery_beat_schedule
 
 
 # ------------------------------------------------------
@@ -169,7 +183,7 @@ CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", default=86400, cast=int
 class CeleryConfig:
     BROKER_URL = get_db_or_broker_uri("CELERY_BROKER", BROKER_PREFIXES, BROKER_DEFAULT_PORTS)
     CELERY_IMPORTS = ("superset.sql_lab", "superset.tasks")
-    CELERY_RESULT_BACKEND = RESULTS_BACKENDS_URIS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), lambda: None)()
+    CELERY_RESULT_BACKEND = RESULTS_BACKENDS_URIS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), "")
     CELERYD_LOG_LEVEL = get_env("CELERYD_LOG_LEVEL", default="DEBUG")
     CELERY_ACKS_LATE = get_env("CELERY_ACKS_LATE", default=False, cast=bool)
     CELERY_ANNOTATIONS = {
@@ -183,8 +197,7 @@ class CeleryConfig:
             "ignore_result": get_env("CELERY_EMAIL_REPORTS_IGNORE_RESULT", default=True, cast=bool)
         }
     }
-    # TODO Celery Beat schedules will be added
-    # CELERY_BEAT_SCHEDULE = get_scheduled_jobs()
+    CELERY_BEAT_SCHEDULE = get_celery_beat_schedule()
 
 
 CELERY_CONFIG = CeleryConfig
@@ -367,7 +380,7 @@ PUBLIC_ROLE_LIKE_GAMMA = get_env("PUBLIC_ROLE_LIKE_GAMMA", default=False, cast=b
 # ------------------------------------------------------
 
 # ------------------------------------------------------
-RESULTS_BACKEND = RESULTS_BACKENDS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), lambda: None)()
+RESULTS_BACKEND = RESULTS_BACKENDS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), None)
 # ------------------------------------------------------
 
 # ------------------------------------------------------

@@ -10,6 +10,22 @@ services:
       SUPERSET_DAEMONS: |
         init
         webserver
+      # TODO Cache warmup configuration will be tested
+      CACHE_WARMUPS: |
+        [
+          {
+            "schedule": "* * * * *",
+            "kwargs": {"strategy": "dummy"}
+          },
+          {
+            "schedule": "* * * * *",
+            "kwargs": {"strategy": "top_n_dashboards", "top_n": 5, "since": "7 days ago"}
+          },
+          {
+            "schedule": "* * * * *",
+            "kwargs": {"strategy": "dashboard_tags", "tags": ["a", "b", "c"]}
+          }
+        ]
     ports:
       - 8088:8088
 
