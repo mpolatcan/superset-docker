@@ -4,7 +4,6 @@ services:
     image: mpolatcan/superset:dev
     container_name: superset-webserver
     hostname: superset-webserver
-    entrypoint: sleep infinity
     env_file:
       - prod-memcached.env
     environment:
@@ -16,7 +15,6 @@ services:
 
   superset-worker:
     image: mpolatcan/superset:dev
-    entrypoint: sleep infinity
     env_file:
       - prod-memcached.env
     environment:
