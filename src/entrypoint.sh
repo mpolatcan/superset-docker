@@ -2,9 +2,6 @@
 # Written by Mutlu Polatcan
 # 05.05.2020
 # ---------------------------------------------
-# TODO Review entrypoint.sh log messages
-
-
 declare -A __SERVICE_PORTS__
 declare -A __SUPERSET_DAEMONS__
 
@@ -13,9 +10,10 @@ __SERVICE_PORTS__[mysql]="3306"
 __SERVICE_PORTS__[redis]="6379"
 __SERVICE_PORTS__[rabbitmq]="5672"
 
-__SUPERSET_DAEMONS__[worker]=run_celery_worker
-__SUPERSET_DAEMONS__[webserver]=run_superset_webserver
 __SUPERSET_DAEMONS__[init]=init_superset
+__SUPERSET_DAEMONS__[webserver]=run_superset_webserver
+__SUPERSET_DAEMONS__[worker]=run_celery_worker
+__SUPERSET_DAEMONS__[flower]=run_celery_flower
 
 SUPERSET_COMPONENT_METADATA_DATABASE="metadata_database"
 SUPERSET_COMPONENT_BROKER="broker"
@@ -167,6 +165,12 @@ function run_celery_worker() {
                 -O fair \
                 -c ${CELERY_BROKER_CONCURRENCY:=4} \
                 -E
+}
+
+function run_celery_flower() {
+  __log__ "Running Celery Flower..."
+
+  celery flower --app=superset.tasks.celery_app:app
 }
 
 function main() {
