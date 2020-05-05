@@ -1,9 +1,9 @@
+#!/bin/bash
 # Written by Mutlu Polatcan
 # 05.05.2020
 # ---------------------------------------------
 # TODO Review entrypoint.sh log messages
 
-#!/bin/bash
 
 declare -A __SERVICE_PORTS__
 declare -A __SUPERSET_DAEMONS__

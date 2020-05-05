@@ -57,7 +57,7 @@ RESULTS_BACKENDS = {
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
     "memcached": MemcachedCache(
-        servers=get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", cast=list),
+        servers=get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", default=[], cast=list),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
         key_prefix=get_env("RESULTS_BACKEND_MEMCACHED_KEY_PREFIX", default="superset_results")
     )
@@ -72,7 +72,7 @@ RESULTS_BACKENDS_URIS = {
         db=get_env("RESULTS_BACKEND_REDIS_DB", default=1)
     ),
     "memcached": "cache+memcached://{servers}/".format(
-        servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", cast=list))
+        servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", default=[], cast=list))
     )
 }
 
@@ -218,7 +218,7 @@ CELERY_CONFIG = CeleryConfig
 CORS_OPTIONS = {
     "origins": get_env("CORS_OPTIONS_ORIGINS", default=["*"], cast=list),
     "methods": get_env("CORS_OPTIONS_METHODS", default=["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"], cast=list),
-    "expose_headers": get_env("CORS_OPTIONS_EXPOSE_HEADERS", cast=list),
+    "expose_headers": get_env("CORS_OPTIONS_EXPOSE_HEADERS", default=[], cast=list),
     "allow_headers": get_env("CORS_OPTIONS_ALLOW_HEADERS", default=["*"], cast=list),
     "send_wildcard": get_env("CORS_OPTIONS_SEND_WILDCARD", default=False, cast=bool),
     "vary_header": get_env("CORS_OPTIONS_VARY_HEADER", default=True, cast=bool)
