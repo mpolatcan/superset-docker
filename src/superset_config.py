@@ -44,11 +44,11 @@ BROKER_PREFIXES = {"redis": "redis", "rabbitmq": "pyamqp"}
 BROKER_DEFAULT_PORTS = {"redis": 6379, "rabbitmq": 5672}
 
 RESULTS_BACKENDS = {
-    "simple": SimpleCache(
+    "simple": lambda: SimpleCache(
         threshold=get_env("RESULTS_BACKEND_THRESHOLD", default=10, cast=int),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
-    "redis": RedisCache(
+    "redis": lambda: RedisCache(
         host=get_env("RESULTS_BACKEND_REDIS_HOST"),
         port=get_env("RESULTS_BACKEND_REDIS_PORT", default=6379, cast=int),
         password=get_env("RESULTS_BACKEND_REDIS_PASSWORD"),
@@ -56,7 +56,7 @@ RESULTS_BACKENDS = {
         db=get_env("RESULTS_BACKEND_REDIS_DB", default=0, cast=int),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
-    "memcached": MemcachedCache(
+    "memcached": lambda: MemcachedCache(
         servers=get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", default=[], cast=list),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
         key_prefix=get_env("RESULTS_BACKEND_MEMCACHED_KEY_PREFIX", default="superset_results")
@@ -77,8 +77,8 @@ RESULTS_BACKENDS_URIS = {
 }
 
 STATS_LOGGERS = {
-    "dummy": DummyStatsLogger(prefix=get_env("DUMMY_STATS_LOGGER_PREFIX", default="superset")),
-    "statsd": StatsdStatsLogger(
+    "dummy": lambda: DummyStatsLogger(prefix=get_env("DUMMY_STATS_LOGGER_PREFIX", default="superset")),
+    "statsd": lambda: StatsdStatsLogger(
         host=get_env("STATSD_STATS_LOGGER_HOST", default="localhost"),
         port=get_env("STATSD_STATS_LOGGER_PORT", default=8125, cast=int),
         prefix=get_env("STATSD_STATS_LOGGER_PREFIX", default="superset")
@@ -391,7 +391,7 @@ PUBLIC_ROLE_LIKE_GAMMA = get_env("PUBLIC_ROLE_LIKE_GAMMA", default=False, cast=b
 # ------------------------------------------------------
 
 # ------------------------------------------------------
-RESULTS_BACKEND = RESULTS_BACKENDS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), None)
+RESULTS_BACKEND = RESULTS_BACKENDS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), lambda: None)()
 # ------------------------------------------------------
 
 # ------------------------------------------------------
@@ -451,7 +451,7 @@ SSL_CERT_PATH = get_env("SSL_CERT_PATH")
 # ------------------------------------------------------
 
 # ------------------------------------------------------
-STATS_LOGGER = STATS_LOGGERS.get(get_env("STATS_LOGGER_TYPE", default="dummy"), STATS_LOGGERS["dummy"])
+STATS_LOGGER = STATS_LOGGERS.get(get_env("STATS_LOGGER_TYPE", default="dummy"), STATS_LOGGERS["dummy"])()
 # ------------------------------------------------------
 
 # ------------------------------------------------------
