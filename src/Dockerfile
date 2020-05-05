@@ -1,3 +1,4 @@
+# TODO Superset user (non-root) will be created
 FROM python:3.7-slim
 
 MAINTAINER <mutlupolatcan@gmail.com> Mutlu Polatcan

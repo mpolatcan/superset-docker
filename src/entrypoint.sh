@@ -2,6 +2,7 @@
 # Written by Mutlu Polatcan
 # 05.05.2020
 # ---------------------------------------------
+# TODO Gunicorn running mode will be added
 declare -A __SERVICE_PORTS__
 declare -A __SUPERSET_DAEMONS__
 
@@ -42,7 +43,7 @@ function __retry_loop__() {
     (( counter = counter + 1 ))
 
     if [[ ${SUPERSET_MAX_RETRY_TIMES:=-1} -ne -1 && $counter -ge ${SUPERSET_MAX_RETRY_TIMES:=-1} ]]; then
-      __log__ $3
+      __log__ "$3"
       __log__ "Max retry times \"${SUPERSET_MAX_RETRY_TIMES:=-1}\" reached. Exiting now..."
       exit 1
     fi
@@ -163,23 +164,27 @@ function init_superset() {
 }
 
 function run_superset_webserver() {
-  __log__ "Running Superset webserver..."
-
-  superset run --host 0.0.0.0 --port 8088 --with-threads --reload --debugger
+  __retry_loop__ "superset run --host 0.0.0.0 --port 8088 --with-threads --reload --debugger" \
+                 "Running Superset webserver..." \
+                 "Superset webserver cannot be started!" \
+                 "Waiting Superset webserver to start..." \
+                 "Superset webserver successfully started!"
 }
 
 function run_celery_worker() {
   __retry_loop__ "celery worker --app=superset.tasks.celery_app:app --pool=${CELERY_BROKER_POOL_TYPE:=prefork} -O fair -c ${CELERY_BROKER_CONCURRENCY:=4} -E" \
-                 "Running Celery worker..." \
-                 "Celery worker cannot be started!" \
-                 "Waiting Celery worker to start..." \
-                 "Celery worker successfully started!"
+                 "Running Celery Worker..." \
+                 "Celery Worker cannot be started!" \
+                 "Waiting Celery Worker to start..." \
+                 "Celery Worker successfully started!"
 }
 
 function run_celery_flower() {
-  __log__ "Running Celery Flower..."
-
-  celery flower --app=superset.tasks.celery_app:app
+  __retry_loop__ "celery flower --app=superset.tasks.celery_app:app" \
+                 "Running Celery Flower..." \
+                 "Celery Flower cannot be started!" \
+                 "Waiting Celery Flower to start..." \
+                 "Celery Flower successfully started!"
 }
 
 function main() {
