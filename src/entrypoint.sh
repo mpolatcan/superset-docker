@@ -28,6 +28,33 @@ function __log__() {
   echo "[$(date '+%d/%m/%Y %H:%M:%S')] -> $1"
 }
 
+# $1: Running command
+# $2: Start message
+# $3: Max retry times reached message
+# $4: Retry message
+# $5: Success message
+function __retry_loop__() {
+  __log__ "$2"
+  counter=0
+  $1
+
+  until [[ $? -eq 0 ]]; do
+    (( counter = counter + 1 ))
+
+    if [[ ${SUPERSET_MAX_RETRY_TIMES:=-1} -ne -1 && $counter -ge ${SUPERSET_MAX_RETRY_TIMES:=-1} ]]; then
+      __log__ $3
+      __log__ "Max retry times \"${SUPERSET_MAX_RETRY_TIMES:=-1}\" reached. Exiting now..."
+      exit 1
+    fi
+
+    __log__ "$4. Retrying after ${SUPERSET_RETRY_INTERVAL_IN_SECS:=2} seconds... (times: $counter)."
+    sleep ${SUPERSET_RETRY_INTERVAL_IN_SECS:=2}
+    $1
+  done
+
+  __log__ "$5"
+}
+
 # $1: Component name
 # $2: Component type
 # $3: Component hostname
@@ -40,27 +67,11 @@ function __health_checker__() {
     __log__ "Superset $1 host is $3. OK ✔"
   fi
 
-  __log__ "Superset $1 healtcheck started ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")..."
-  nc -z $3 $4
-  result=$?
-  counter=0
-
-  until [[ $result -eq 0 ]]; do
-    (( counter = counter + 1 ))
-
-    if [[ ${SUPERSET_MAX_RETRY_TIMES:=-1} -ne -1 && $counter -ge ${SUPERSET_MAX_RETRY_TIMES:=-1} ]]; then
-      __log__ "Superset $1 healthcheck failed ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")..."
-      __log__ "Max retry times \"${SUPERSET_MAX_RETRY_TIMES:=-1}\" reached. Exiting now..."
-      exit 1
-    fi
-
-    __log__ "Waiting $1 is ready ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\"). Retrying after ${SUPERSET_RETRY_INTERVAL_IN_SECS:=2} seconds... (times: $counter)."
-    sleep ${SUPERSET_RETRY_INTERVAL_IN_SECS:=2}
-    nc -z $3 $4
-    result=$?
-  done
-
-  __log__ "Superset $1 is ready ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\") ✔"
+  __retry_loop__ "nc -z $3 $4" \
+                 "Superset $1 healtcheck started ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")..." \
+                 "Superset $1 healthcheck failed ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")..." \
+                 "Waiting $1 is ready ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")" \
+                 "Superset $1 is ready ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\") ✔"
 }
 
 # $1: Component name
@@ -158,13 +169,11 @@ function run_superset_webserver() {
 }
 
 function run_celery_worker() {
-  __log__ "Running Celery worker..."
-
-  celery worker --app=superset.tasks.celery_app:app \
-                --pool=${CELERY_BROKER_POOL_TYPE:=prefork} \
-                -O fair \
-                -c ${CELERY_BROKER_CONCURRENCY:=4} \
-                -E
+  __retry_loop__ "celery worker --app=superset.tasks.celery_app:app --pool=${CELERY_BROKER_POOL_TYPE:=prefork} -O fair -c ${CELERY_BROKER_CONCURRENCY:=4} -E" \
+                 "Running Celery worker..." \
+                 "Celery worker cannot be started!" \
+                 "Waiting Celery worker to start..." \
+                 "Celery worker successfully started!"
 }
 
 function run_celery_flower() {

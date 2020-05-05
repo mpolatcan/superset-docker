@@ -10,6 +10,7 @@ services:
       SUPERSET_DAEMONS: |
         init
         webserver
+        flower
       # TODO Cache warmup configuration will be tested
       CACHE_WARMUPS: |
         [
@@ -28,6 +29,7 @@ services:
         ]
     ports:
       - 8088:8088
+      - 5555:5555
 
   superset-worker:
     image: mpolatcan/superset:dev
