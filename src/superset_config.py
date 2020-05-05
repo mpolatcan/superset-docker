@@ -107,7 +107,7 @@ def get_db_or_broker_uri(env_var_prefix, default_prefixes, default_ports):
 
 def get_cache_config(env_var_prefix):
     def set_config(config_dict, config_key, default=None, cast: type = str):
-        value = get_env(config_key, default=default, cast=cast)
+        value = get_env("{}_{}".format(env_var_prefix, config_key), default=default, cast=cast)
 
         if value:
             config_dict[config_key] = value
@@ -120,7 +120,7 @@ def get_cache_config(env_var_prefix):
                               ("REDIS_PORT", 6379, int), ("REDIS_PASSWORD", str), ("REDIS_DB", 0, int), ("DIR", str)]:
         set_config(
             config_dict=cache_config,
-            config_key="{}_CACHE_{}".format(env_var_prefix, cache_config_info[0]),
+            config_key="CACHE_{}".format(cache_config_info[0]),
             default=cache_config_info[1] if len(cache_config_info) > 2 else None,
             cast=cache_config_info[-1]
         )
