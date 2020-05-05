@@ -27,7 +27,9 @@ RUN apt-get update && \
                        unixodbc \
                        unixodbc-dev \
                        procps \
-                       netcat && \
+                       netcat \
+                       iputils-ping \
+                       nano && \
     pip install --upgrade setuptools pip virtualenv && \
     addgroup superset && adduser --disabled-password --gecos "" --ingroup superset superset && \
     mkdir -p ${SUPERSET_USER_HOME} && \
@@ -39,4 +41,5 @@ RUN apt-get update && \
     chmod +x entrypoint.sh && \
     chown -R superset:superset ${SUPERSET_USER_HOME}
 
+USER superset
 ENTRYPOINT ["./entrypoint.sh"]
