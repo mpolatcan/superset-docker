@@ -147,7 +147,7 @@ def get_celery_beat_schedule():
     }
 
     if get_env("ENABLE_CACHE_WARMUP", default=False, cast=bool):
-        cache_warmups = json.loads(get_env("CACHE_WARMUPS").replace("\n", "").replace(" ", ""))
+        cache_warmups = json.loads(get_env("CACHE_WARMUPS"))
 
         for idx, cache_warmup in enumerate(cache_warmups):
             cache_warmup_id = "cache-warmup-{}".format(idx)
