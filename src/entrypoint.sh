@@ -1,3 +1,8 @@
+# Written by Mutlu Polatcan
+# 05.05.2020
+# ---------------------------------------------
+# TODO Review entrypoint.sh log messages
+
 #!/bin/bash
 
 declare -A __SERVICE_PORTS__
@@ -18,6 +23,7 @@ SUPERSET_COMPONENT_RESULTS_BACKEND="results_backend"
 SUPERSET_COMPONENT_CACHE="cache"
 SUPERSET_COMPONENT_TABLE_NAMES_CACHE="table_names_cache"
 SUPERSET_COMPONENT_THUMBNAIL_CACHE="thumbnail_cache"
+SUPERSET_COMPONENT_STATS_LOGGER_STATSD="stats_logger_statsd"
 
 # $1: message
 function __log__() {
@@ -30,10 +36,10 @@ function __log__() {
 # $4: Component port
 function __health_checker__() {
   if [[ "$3" == "" ]]; then
-      __log__ "Superset $1 host is not defined. Exiting ✘..."
-      exit 1
+    __log__ "Superset $1 host is not defined. Exiting ✘..."
+    exit 1
   else
-      __log__ "Superset $1 host is $3. OK ✔"
+    __log__ "Superset $1 host is $3. OK ✔"
   fi
 
   __log__ "Superset $1 healtcheck started ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")..."
@@ -45,9 +51,9 @@ function __health_checker__() {
     (( counter = counter + 1 ))
 
     if [[ ${SUPERSET_MAX_RETRY_TIMES:=-1} -ne -1 && $counter -ge ${SUPERSET_MAX_RETRY_TIMES:=-1} ]]; then
-        __log__ "Superset $1 healthcheck failed ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")..."
-        __log__ "Max retry times \"${SUPERSET_MAX_RETRY_TIMES:=-1}\" reached. Exiting now..."
-        exit 1
+      __log__ "Superset $1 healthcheck failed ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\")..."
+      __log__ "Max retry times \"${SUPERSET_MAX_RETRY_TIMES:=-1}\" reached. Exiting now..."
+      exit 1
     fi
 
     __log__ "Waiting $1 is ready ($1_type: \"$2\", $1_host: \"$3\", $1_port: \"$4\"). Retrying after ${SUPERSET_RETRY_INTERVAL_IN_SECS:=2} seconds... (times: $counter)."
@@ -66,9 +72,9 @@ function __memcached_servers_healthcheck__() {
   IFS="," read -r -a MEMCACHED_SERVERS <<< "$3"
 
   for server in ${MEMCACHED_SERVERS[@]}; do
-      IFS=":" read -r -a SERVER_INFO <<< $server
+    IFS=":" read -r -a SERVER_INFO <<< $server
 
-      __health_checker__ "$1" "$2" ${SERVER_INFO[0]} ${SERVER_INFO[1]}
+    __health_checker__ "$1" "$2" ${SERVER_INFO[0]} ${SERVER_INFO[1]}
   done
 }
 
@@ -81,37 +87,46 @@ function __cache_or_results_backend_healthcheck__() {
   memcached_servers=$2_MEMCACHED_SERVERS
 
   if [[ "${!type:=null}" == "redis" ]]; then
-      __health_checker__ "$1" "${!type}" "${!redis_host}" "${!redis_port:=${__SERVICE_PORTS__[redis]}}"
+    __health_checker__ "$1" "${!type}" "${!redis_host}" "${!redis_port:=${__SERVICE_PORTS__[redis]}}"
   elif [[ "${!type:=null}" == "memcached" ]]; then
-      __memcached_servers_healthcheck__ "$1" "${!type}" "${!memcached_servers}"
+    __memcached_servers_healthcheck__ "$1" "${!type}" "${!memcached_servers}"
   fi
 }
 
-function run_healthchecks() {
+
+function run_worker_healthchecks() {
+  # Celery broker health check
+  __health_checker__ "${SUPERSET_COMPONENT_BROKER}" \
+                     "${CELERY_BROKER_TYPE:=redis}" \
+                     "${CELERY_BROKER_HOST}" \
+                     "${CELERY_BROKER_PORT:=${__SERVICE_PORTS__[${CELERY_BROKER_TYPE:=redis}]}}"
+
+  # Result backend health check
+  __cache_or_results_backend_healthcheck__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "RESULTS_BACKEND"
+}
+
+function run_common_healthchecks() {
   # Metadata database health check
   __health_checker__ "${SUPERSET_COMPONENT_METADATA_DATABASE}" \
                      "${METADATA_DB_TYPE:=postgresql}" \
                      "${METADATA_DB_HOST}" \
                      "${METADATA_DB_PORT:=${__SERVICE_PORTS__[${METADATA_DB_TYPE:=postgresql}]}}"
 
-  if [[ "${SUPERSET_DEPLOY_MODE:=development}" == "production" ]]; then
-      # Celery broker health check
-      __health_checker__ "${SUPERSET_COMPONENT_BROKER}" \
-                         "${CELERY_BROKER_TYPE:=redis}" \
-                         "${CELERY_BROKER_HOST}" \
-                         "${CELERY_BROKER_PORT:=${__SERVICE_PORTS__[${CELERY_BROKER_TYPE:=redis}]}}"
+  # Main cache health check
+  __cache_or_results_backend_healthcheck__ "${SUPERSET_COMPONENT_CACHE}" "CACHE_CONFIG_CACHE"
 
-      # Result backend health check
-      __cache_or_results_backend_healthcheck__ "${SUPERSET_COMPONENT_RESULTS_BACKEND}" "RESULTS_BACKEND"
+  # Table names cache health check
+  __cache_or_results_backend_healthcheck__ "${SUPERSET_COMPONENT_TABLE_NAMES_CACHE}" "TABLE_NAMES_CACHE_CONFIG_CACHE"
 
-      # Main cache health check
-      __cache_or_results_backend_healthcheck__ "${SUPERSET_COMPONENT_CACHE}" "CACHE_CONFIG_CACHE"
+  # Thumbnail cache health check
+  __cache_or_results_backend_healthcheck__ "${SUPERSET_COMPONENT_THUMBNAIL_CACHE}" "THUMBNAIL_CACHE_CONFIG_CACHE"
 
-      # Table names cache health check
-      __cache_or_results_backend_healthcheck__ "${SUPERSET_COMPONENT_TABLE_NAMES_CACHE}" "TABLE_NAMES_CACHE_CONFIG_CACHE"
-
-      # Thumbnail cache health check
-      __cache_or_results_backend_healthcheck__ "${SUPERSET_COMPONENT_THUMBNAIL_CACHE}" "THUMBNAIL_CACHE_CONFIG_CACHE"
+  # Statsd server health check
+  if [[ "${STATS_LOGGER_TYPE:=dummy}" == "statsd" ]]; then
+    __health_checker__ "${SUPERSET_COMPONENT_STATS_LOGGER_STATSD}" \
+                       "${STATS_LOGGER_TYPE}" \
+                       "${STATSD_STATS_LOGGER_HOST}" \
+                       "${STATSD_STATS_LOGGER_PORT}"
   fi
 }
 
@@ -130,8 +145,8 @@ function init_superset() {
                             --password ${ADMIN_PASSWORD:=admin}
 
   if [[ "${LOAD_EXAMPLES:=false}" == "true" ]]; then
-      __log__ "Loading Superset examples..."
-      superset load_examples
+    __log__ "Loading Superset examples..."
+    superset load_examples
   fi
 
   __log__ "Initializing Superset..."
@@ -155,21 +170,25 @@ function run_celery_worker() {
 }
 
 function main() {
-    run_healthchecks
+  run_common_healthchecks
 
-    if [[ "${SUPERSET_DAEMONS}" != "" ]]; then
-        for daemon in ${SUPERSET_DAEMONS[@]}; do
-            if [[ "$daemon" == "init" ]]; then
-                ${__SUPERSET_DAEMONS__[$daemon]}
-            else
-                ${__SUPERSET_DAEMONS__[$daemon]} &
-            fi
-        done
+  if [[ "${SUPERSET_DAEMONS}" != "" ]]; then
+    for daemon in ${SUPERSET_DAEMONS[@]}; do
+      if [[ "$daemon" == "init" ]]; then
+        ${__SUPERSET_DAEMONS__[$daemon]}
+      else
+        if [[ "$daemon" == "worker" ]]; then
+          run_worker_healthchecks
+        fi
 
-        tail -f /dev/null
-    else
-        __log__ "Any Superset daemons not defined. Exiting..."
-    fi
+        ${__SUPERSET_DAEMONS__[$daemon]} &
+      fi
+    done
+
+    tail -f /dev/null
+  else
+    __log__ "Any Superset daemons not defined. Exiting..."
+  fi
 }
 
 main

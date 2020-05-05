@@ -1,13 +1,15 @@
 # Written by Mutlu Polatcan
 # 05.05.2020
+# -------------------------------------------------
 # TODO Write environment variables list to Markdown
 # TODO S3 result backend will be added
 import json
 from os import environ
 from dateutil import tz
+from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_LDAP, AUTH_OID, AUTH_REMOTE_USER
 from werkzeug.contrib.cache import SimpleCache, MemcachedCache, RedisCache
-from celery.schedules import crontab
+from superset.stats_logger import DummyStatsLogger, StatsdStatsLogger
 
 ENV_VAR_TYPE_CASTER = {
     int: lambda value: int(value),
@@ -71,6 +73,15 @@ RESULTS_BACKENDS_URIS = {
     ),
     "memcached": "cache+memcached://{servers}/".format(
         servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", cast=list))
+    )
+}
+
+STATS_LOGGERS = {
+    "dummy": DummyStatsLogger(prefix=get_env("DUMMY_STATS_LOGGER_PREFIX", default="superset")),
+    "statsd": StatsdStatsLogger(
+        host=get_env("STATSD_STATS_LOGGER_HOST", default="localhost"),
+        port=get_env("STATSD_STATS_LOGGER_PORT", default=8125, cast=int),
+        prefix=get_env("STATSD_STATS_LOGGER_PREFIX", default="superset")
     )
 }
 
@@ -437,6 +448,10 @@ SMTP_USER = get_env("SMTP_USER", default="superset")
 
 # ------------------------------------------------------
 SSL_CERT_PATH = get_env("SSL_CERT_PATH")
+# ------------------------------------------------------
+
+# ------------------------------------------------------
+STATS_LOGGER = STATS_LOGGERS.get(get_env("STATS_LOGGER_TYPE", default="dummy"), STATS_LOGGERS["dummy"])
 # ------------------------------------------------------
 
 # ------------------------------------------------------
