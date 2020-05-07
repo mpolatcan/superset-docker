@@ -18,7 +18,9 @@ ADD entrypoint.sh .
 ADD superset_config.py ${SUPERSET_CONFIG_PATH}
 
 RUN apt-get update && \
+    mkdir -p /usr/share/man/man1 && \
     apt-get -y install build-essential \
+                       default-jre \
                        libssl-dev \
                        libffi-dev \
                        libsasl2-dev \
