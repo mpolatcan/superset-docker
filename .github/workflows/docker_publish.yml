@@ -39,4 +39,4 @@ jobs:
           --build-arg SUPERSET_VERSION=${{matrix.superset_version}}
           src/setup
       - run: docker push ${{secrets.DOCKER_USERNAME}}/${{matrix.repository}}:${{matrix.superset_version}}-python${{matrix.python_version}}
-      - run: docker rmi s${{secrets.DOCKER_USERNAME}}/${{matrix.repository}}:${{matrix.superset_version}}-python${{matrix.python_version}}
+      - run: docker rmi ${{secrets.DOCKER_USERNAME}}/${{matrix.repository}}:${{matrix.superset_version}}-python${{matrix.python_version}}
