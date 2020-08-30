@@ -36,6 +36,6 @@ RUN apt-get update && \
     addgroup superset && adduser --disabled-password --gecos "" --ingroup superset superset && \
     mkdir -p ${SUPERSET_USER_HOME} && \
     mkdir -p ${SUPERSET_HOME} ${SUPERSET_VIRTUALENV} && \
-    virtualenv -p python3 ${SUPERSET_VIRTUALENV} \
+    virtualenv -p python3 ${SUPERSET_VIRTUALENV} && \
     chmod +x entrypoint.sh && \
     chown -R superset:superset ${SUPERSET_USER_HOME}
