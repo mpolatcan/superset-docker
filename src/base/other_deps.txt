@@ -1,0 +1,7 @@
+apache-superset[cors]
+redis
+pylibmc
+flower
+statsd
+Pillow
+gevent

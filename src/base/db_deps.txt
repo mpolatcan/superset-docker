@@ -14,7 +14,6 @@ sqlalchemy_dremio
 elasticsearch-dbapi
 sqlalchemy-exasol
 gsheetsdb
-ibm_db_sa
 mysqlclient
 cx_Oracle
 psycopg2-binary
@@ -22,4 +21,3 @@ snowflake-sqlalchemy
 pymssql
 sqlalchemy-vertica-python
 hdbcli
-sqlalchemy-hana

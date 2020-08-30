@@ -2,7 +2,6 @@
 # Written by Mutlu Polatcan
 # 05.05.2020
 # ---------------------------------------------
-# TODO Gunicorn running mode will be added
 declare -A __SERVICE_PORTS__
 declare -A __SUPERSET_DAEMONS__
 
@@ -133,10 +132,10 @@ function run_common_healthchecks() {
 
   # Statsd server health check
   if [[ "${STATS_LOGGER_TYPE:=dummy}" == "statsd" ]]; then
-    __health_checker__ "${SUPERSET_COMPONENT_STATS_LOGGER_STATSD}" \
-                       "${STATS_LOGGER_TYPE}" \
-                       "${STATSD_STATS_LOGGER_HOST}" \
-                       "${STATSD_STATS_LOGGER_PORT}"
+      __health_checker__ "${SUPERSET_COMPONENT_STATS_LOGGER_STATSD}" \
+                         "${STATS_LOGGER_TYPE}" \
+                         "${STATSD_STATS_LOGGER_HOST}" \
+                         "${STATSD_STATS_LOGGER_PORT}"
   fi
 }
 
@@ -164,7 +163,7 @@ function init_superset() {
 }
 
 function run_superset_webserver() {
-  __retry_loop__ "superset run --host 0.0.0.0 --port 8088 --with-threads --reload --debugger" \
+  __retry_loop__ "gunicorn -b 0.0.0.0:8088 -w 10 -k gevent --timeout 120 --limit-request-line 0 --limit-request-field_size 0 superset.app:create_app()" \
                  "Running Superset webserver..." \
                  "Superset webserver cannot be started!" \
                  "Waiting Superset webserver to start..." \
@@ -191,21 +190,21 @@ function main() {
   run_common_healthchecks
 
   if [[ "${SUPERSET_DAEMONS}" != "" ]]; then
-    for daemon in ${SUPERSET_DAEMONS[@]}; do
-      if [[ "$daemon" == "init" ]]; then
-        ${__SUPERSET_DAEMONS__[$daemon]}
-      else
-        if [[ "$daemon" == "worker" ]]; then
-          run_worker_healthchecks
-        fi
+      for daemon in ${SUPERSET_DAEMONS[@]}; do
+          if [[ "$daemon" == "init" ]]; then
+              ${__SUPERSET_DAEMONS__[$daemon]}
+          else
+              if [[ "$daemon" == "worker" ]]; then
+                  run_worker_healthchecks
+              fi
 
-        ${__SUPERSET_DAEMONS__[$daemon]} &
-      fi
-    done
+              ${__SUPERSET_DAEMONS__[$daemon]} &
+          fi
+      done
 
-    tail -f /dev/null
+      tail -f /dev/null
   else
-    __log__ "Any Superset daemons not defined. Exiting..."
+      __log__ "Any Superset daemons not defined. Exiting..."
   fi
 }
 

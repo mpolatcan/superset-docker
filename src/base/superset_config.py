@@ -8,7 +8,7 @@ from os import environ
 from dateutil import tz
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_LDAP, AUTH_OID, AUTH_REMOTE_USER
-from werkzeug.contrib.cache import SimpleCache, MemcachedCache, RedisCache
+from cachelib import SimpleCache, RedisCache, MemcachedCache
 from superset.stats_logger import DummyStatsLogger, StatsdStatsLogger
 
 ENV_VAR_TYPE_CASTER = {
