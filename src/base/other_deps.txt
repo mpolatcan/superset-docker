@@ -1,4 +1,5 @@
 apache-superset[cors]
+s3werkzeugcache
 redis
 pylibmc
 flower

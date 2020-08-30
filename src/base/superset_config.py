@@ -2,13 +2,13 @@
 # 05.05.2020
 # -------------------------------------------------
 # TODO Write environment variables list to Markdown
-# TODO S3 result backend will be added
 import json
 from os import environ
 from dateutil import tz
 from celery.schedules import crontab
 from flask_appbuilder.security.manager import AUTH_DB, AUTH_LDAP, AUTH_OID, AUTH_REMOTE_USER
 from cachelib import SimpleCache, RedisCache, MemcachedCache
+from s3cache.s3cache import S3Cache
 from superset.stats_logger import DummyStatsLogger, StatsdStatsLogger
 
 ENV_VAR_TYPE_CASTER = {
@@ -60,10 +60,14 @@ RESULTS_BACKENDS = {
         servers=get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", default=[], cast=list),
         default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
         key_prefix=get_env("RESULTS_BACKEND_MEMCACHED_KEY_PREFIX", default="superset_results")
+    ),
+    "s3": lambda: S3Cache(
+        s3_bucket=get_env("RESULT_BACKEND_S3_BUCKET_NAME"),
+        key_prefix=get_env("RESULT_BACKEND_S3_KEY_PREFIX", default="superset_results")
     )
 }
 
-RESULTS_BACKENDS_URIS = {
+CELERY_RESULTS_BACKENDS_URIS = {
     "redis": "redis://{password}{host}:{port}/{db}".format(
         password="{}@".format(get_env("RESULTS_BACKEND_REDIS_PASSWORD"))
                  if get_env("RESULTS_BACKEND_REDIS_PASSWORD") else "",
@@ -194,7 +198,7 @@ CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", default=60 * 60 * 24, c
 class CeleryConfig:
     BROKER_URL = get_db_or_broker_uri("CELERY_BROKER", BROKER_PREFIXES, BROKER_DEFAULT_PORTS)
     CELERY_IMPORTS = ("superset.sql_lab", "superset.tasks")
-    CELERY_RESULT_BACKEND = RESULTS_BACKENDS_URIS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), "")
+    CELERY_RESULT_BACKEND = CELERY_RESULTS_BACKENDS_URIS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), "")
     CELERYD_LOG_LEVEL = get_env("CELERYD_LOG_LEVEL", default="DEBUG")
     CELERY_ACKS_LATE = get_env("CELERY_ACKS_LATE", default=False, cast=bool)
     CELERY_ANNOTATIONS = {
