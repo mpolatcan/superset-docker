@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: superset-worker
+  labels:
+    app: superset
+    unit: worker
+spec:
+  selector:
+    matchLabels:
+      app: superset
+      unit: worker
+  template:
+    metadata:
+      labels:
+        app: superset
+        unit: worker
+    spec:
+      containers:
+      - name: superset-worker
+        image: mpolatcan/superset:0.37.0-python3.7
+        env:
+          - name: SUPERSET_DAEMONS
+            value: |
+              worker
+        envFrom:
+          - configMapRef:
+              name: superset-config
+          - secretRef:
+              name: superset-secret

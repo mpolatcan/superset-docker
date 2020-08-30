@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: superset-webserver-svc
+spec:
+  selector:
+    app: superset
+    unit: webserver
+  ports:
+  - port: 8088
+    targetPort: 8088
+  type: ClusterIP

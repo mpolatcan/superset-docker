@@ -163,7 +163,7 @@ function init_superset() {
 }
 
 function run_superset_webserver() {
-  __retry_loop__ "gunicorn -b 0.0.0.0:8088 -w 10 -k gevent --timeout 120 --limit-request-line 0 --limit-request-field_size 0 superset.app:create_app()" \
+  __retry_loop__ "gunicorn -b 0.0.0.0:8088 -w ${GUNICORN_WORKERS:=4} -k gevent --timeout 120 --limit-request-line 0 --limit-request-field_size 0 superset.app:create_app()" \
                  "Running Superset webserver..." \
                  "Superset webserver cannot be started!" \
                  "Waiting Superset webserver to start..." \

@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: superset-webserver
+  labels:
+    app: superset
+    unit: webserver
+spec:
+  selector:
+    matchLabels:
+      app: superset
+      unit: webserver
+  template:
+    metadata:
+      labels:
+        app: superset
+        unit: webserver
+    spec:
+      containers:
+      - name: superset-webserver
+        image: mpolatcan/superset:0.37.0-python3.7
+        env:
+          - name: SUPERSET_DAEMONS
+            value: |
+               init
+               webserver
+        envFrom:
+          - configMapRef:
+              name: superset-config
+          - secretRef:
+              name: superset-secret
+        ports:
+        - containerPort: 8088
