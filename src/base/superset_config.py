@@ -43,40 +43,40 @@ BROKER_PREFIXES = {"redis": "redis", "rabbitmq": "pyamqp"}
 
 BROKER_DEFAULT_PORTS = {"redis": 6379, "rabbitmq": 5672}
 
-RESULTS_BACKENDS = {
+SUPERSET_RESULTS_BACKENDS = {
     "simple": lambda: SimpleCache(
-        threshold=get_env("RESULTS_BACKEND_THRESHOLD", default=10, cast=int),
-        default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
+        threshold=get_env("SUPERSET_SIMPLE_RESULTS_BACKEND_THRESHOLD", default=10, cast=int),
+        default_timeout=get_env("SUPERSET_SIMPLE_RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
     "redis": lambda: RedisCache(
-        host=get_env("RESULTS_BACKEND_REDIS_HOST"),
-        port=get_env("RESULTS_BACKEND_REDIS_PORT", default=6379, cast=int),
-        password=get_env("RESULTS_BACKEND_REDIS_PASSWORD"),
-        key_prefix=get_env("RESULTS_BACKEND_REDIS_KEY_PREFIX", default="superset_results"),
-        db=get_env("RESULTS_BACKEND_REDIS_DB", default=0, cast=int),
-        default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
+        host=get_env("SUPERSET_REDIS_RESULTS_BACKEND_HOST"),
+        port=get_env("SUPERSET_REDIS_RESULTS_BACKEND_PORT", default=6379, cast=int),
+        password=get_env("SUPERSET_REDIS_RESULTS_BACKEND_PASSWORD"),
+        key_prefix=get_env("SUPERSET_REDIS_RESULTS_BACKEND_KEY_PREFIX", default="superset_results"),
+        db=get_env("SUPERSET_REDIS_RESULTS_BACKEND_DB", default=0, cast=int),
+        default_timeout=get_env("SUPERSET_REDIS_RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float)
     ),
     "memcached": lambda: MemcachedCache(
-        servers=get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", default=[], cast=list),
-        default_timeout=get_env("RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
-        key_prefix=get_env("RESULTS_BACKEND_MEMCACHED_KEY_PREFIX", default="superset_results")
+        servers=get_env("SUPERSET_MEMCACHED_RESULTS_BACKEND_SERVERS", default=[], cast=list),
+        default_timeout=get_env("SUPERSET_MEMCACHED_RESULTS_BACKEND_DEFAULT_TIMEOUT", default=300, cast=float),
+        key_prefix=get_env("SUPERSET_MEMCACHED_RESULTS_BACKEND_KEY_PREFIX", default="superset_results")
     ),
     "s3": lambda: S3Cache(
-        s3_bucket=get_env("RESULT_BACKEND_S3_BUCKET_NAME"),
-        key_prefix=get_env("RESULT_BACKEND_S3_KEY_PREFIX", default="superset_results")
+        s3_bucket=get_env("SUPERSET_S3_RESULTS_BACKEND_BUCKET_NAME"),
+        key_prefix=get_env("SUPERSET_S3_RESULTS_BACKEND_KEY_PREFIX", default="superset_results")
     )
 }
 
-CELERY_RESULTS_BACKENDS_URIS = {
+CELERY_RESULT_BACKENDS_URIS = {
     "redis": "redis://{password}{host}:{port}/{db}".format(
-        password="{}@".format(get_env("RESULTS_BACKEND_REDIS_PASSWORD"))
-                 if get_env("RESULTS_BACKEND_REDIS_PASSWORD") else "",
-        host=get_env("RESULTS_BACKEND_REDIS_HOST"),
-        port=get_env("RESULTS_BACKEND_REDIS_PORT", default=6379),
-        db=get_env("RESULTS_BACKEND_REDIS_DB", default=1)
+        password="{}@".format(get_env("CELERY_REDIS_RESULT_BACKEND_PASSWORD"))
+                 if get_env("CELERY_REDIS_RESULT_BACKEND_PASSWORD") else "",
+        host=get_env("CELERY_REDIS_RESULT_BACKEND_HOST"),
+        port=get_env("CELERY_REDIS_RESULT_BACKEND_PORT", default=6379),
+        db=get_env("CELERY_REDIS_RESULT_BACKEND_DB", default=1)
     ),
     "memcached": "cache+memcached://{servers}/".format(
-        servers=";".join(get_env("RESULTS_BACKEND_MEMCACHED_SERVERS", default=[], cast=list))
+        servers=";".join(get_env("CELERY_MEMCACHED_RESULT_BACKEND_SERVERS", default=[], cast=list))
     )
 }
 
@@ -198,7 +198,7 @@ CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", default=60 * 60 * 24, c
 class CeleryConfig:
     BROKER_URL = get_db_or_broker_uri("CELERY_BROKER", BROKER_PREFIXES, BROKER_DEFAULT_PORTS)
     CELERY_IMPORTS = ("superset.sql_lab", "superset.tasks")
-    CELERY_RESULT_BACKEND = CELERY_RESULTS_BACKENDS_URIS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), "")
+    CELERY_RESULT_BACKEND = CELERY_RESULT_BACKENDS_URIS.get(get_env("CELERY_RESULT_BACKEND_TYPE", default="null"), "")
     CELERYD_LOG_LEVEL = get_env("CELERYD_LOG_LEVEL", default="DEBUG")
     CELERY_ACKS_LATE = get_env("CELERY_ACKS_LATE", default=False, cast=bool)
     CELERY_ANNOTATIONS = {
@@ -393,8 +393,8 @@ PUBLIC_ROLE_LIKE_GAMMA = get_env("PUBLIC_ROLE_LIKE_GAMMA", default=False, cast=b
 # ------------------------------------------------------
 
 # ------------------------------------------------------
-RESULTS_BACKEND = RESULTS_BACKENDS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), lambda: None)()
-RESULTS_BACKEND_USE_MSGPACK = get_env("RESULTS_BACKEND_USE_MSGPACK", default=True, cast=bool)
+RESULTS_BACKEND = SUPERSET_RESULTS_BACKENDS.get(get_env("SUPERSET_RESULTS_BACKEND_TYPE", default="null"), lambda: None)()
+RESULTS_BACKEND_USE_MSGPACK = get_env("SUPERSET_RESULTS_BACKEND_USE_MSGPACK", default=True, cast=bool)
 # ------------------------------------------------------
 
 # ------------------------------------------------------
