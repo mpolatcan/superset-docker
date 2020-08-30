@@ -162,7 +162,7 @@ def get_celery_beat_schedule():
 
 
 # ------------------------------------------------------
-APP_ICON = get_env("APP_ICON", default="/static/assets/images/superset-logo@2x.png")
+APP_ICON = get_env("APP_ICON", default="/static/assets/images/superset-logo-horiz.png")
 APP_ICON_WIDTH = get_env("APP_ICON_WIDTH", default=126, cast=int)
 APP_NAME = get_env("APP_NAME", default="Superset")
 # ------------------------------------------------------
