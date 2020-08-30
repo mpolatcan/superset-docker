@@ -1,7 +1,7 @@
 version: "3.5"
 services:
   superset-webserver:
-    image: mpolatcan/superset
+    image: mpolatcan/superset:0.37.0-python3.7
     container_name: superset-webserver
     hostname: superset-webserver
     env_file:
@@ -14,7 +14,7 @@ services:
       - 8088:8088
 
   superset-worker:
-    image: mpolatcan/superset
+    image: mpolatcan/superset:0.37.0-python3.7
     env_file:
       - prod-memcached.env
     environment:

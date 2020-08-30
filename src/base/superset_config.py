@@ -186,7 +186,7 @@ BUG_REPORT_URL = get_env("BUG_REPORT_URL")
 
 # ------------------------------------------------------
 CACHE_CONFIG = get_cache_config("CACHE_CONFIG")
-CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", default=86400, cast=int)
+CACHE_DEFAULT_TIMEOUT = get_env("CACHE_DEFAULT_TIMEOUT", default=60 * 60 * 24, cast=int)
 # ------------------------------------------------------
 
 
@@ -308,9 +308,7 @@ ENABLE_TIME_ROTATE = get_env("ENABLE_TIME_ROTATE", default=False, cast=bool)
 
 # ------------------------------------------------------
 FAB_ADD_SECURITY_PERMISSION_VIEW = get_env("FAB_ADD_SECURITY_PERMISSION_VIEW", default=False, cast=bool)
-FAB_ADD_SECURITY_PERMISSION_VIEWS_VIEW = get_env("FAB_ADD_SECURITY_PERMISSION_VIEWS_VIEW",
-                                                 default=False,
-                                                 cast=bool)
+FAB_ADD_SECURITY_PERMISSION_VIEWS_VIEW = get_env("FAB_ADD_SECURITY_PERMISSION_VIEWS_VIEW", default=False, cast=bool)
 FAB_ADD_SECURITY_VIEW_MENU_VIEW = get_env("FAB_ADD_SECURITY_VIEW_MENU_VIEW", default=False, cast=bool)
 FAB_ADD_SECURITY_VIEWS = get_env("FAB_ADD_SECURITY_VIEWS", default=True, cast=bool)
 FAB_API_SWAGGER_UI = get_env("FAB_API_SWAGGER_UI", default=True, cast=bool)
@@ -332,7 +330,7 @@ FEATURE_FLAGS = {
     "SIP_38_VIZ_REARCHITECTURE": get_env("FEATURE_FLAG_SIP_38_VIZ_REARCHITECTURE", default=False, cast=bool),
     "TAGGING_SYSTEM": get_env("FEATURE_FLAG_TAGGING_SYSTEM", default=False, cast=bool),
     "SQLLAB_BACKEND_PERSISTENCE": get_env("FEATURE_FLAG_SQLLAB_BACKEND_PERSISTENCE", default=False, cast=bool),
-    "LIST_VIEWS_NEW_UI": get_env("FEATURE_FLAG_LIST_VIEWS_NEW_UI", default=False, cast=bool)
+    "LIST_VIEWS_SIP34_FILTER_UI": get_env("FEATURE_FLAG_LIST_VIEWS_SIP34_FILTER_UI", default=False, cast=bool)
 }
 # ------------------------------------------------------
 
@@ -392,6 +390,7 @@ PUBLIC_ROLE_LIKE_GAMMA = get_env("PUBLIC_ROLE_LIKE_GAMMA", default=False, cast=b
 
 # ------------------------------------------------------
 RESULTS_BACKEND = RESULTS_BACKENDS.get(get_env("RESULTS_BACKEND_TYPE", default="null"), lambda: None)()
+RESULTS_BACKEND_USE_MSGPACK = get_env("RESULTS_BACKEND_USE_MSGPACK", default=True, cast=bool)
 # ------------------------------------------------------
 
 # ------------------------------------------------------
@@ -400,6 +399,10 @@ ROLLOVER = get_env("ROLLOVER", default="midnight")
 
 # ------------------------------------------------------
 ROW_LIMIT = get_env("ROW_LIMIT", default=50000, cast=int)
+# ------------------------------------------------------
+
+# ------------------------------------------------------
+SAMPLES_ROW_LIMIT = get_env("SAMPLES_ROW_LIMIT", default=1000, cast=int)
 # ------------------------------------------------------
 
 # ------------------------------------------------------
@@ -456,6 +459,8 @@ STATS_LOGGER = STATS_LOGGERS.get(get_env("STATS_LOGGER_TYPE", default="dummy"), 
 
 # ------------------------------------------------------
 SUPERSET_DASHBOARD_POSITION_DATA_LIMIT = get_env("SUPERSET_DASHBOARD_POSITION_DATA_LIMIT", default=65535, cast=int)
+SUPERSET_DASHBOARD_PERIODICAL_REFRESH_LIMIT = get_env("SUPERSET_DASHBOARD_PERIODICAL_REFRESH_LIMIT", default=0, cast=int)
+SUPERSET_DASHBOARD_PERIODICAL_REFRESH_WARNING_MESSAGE = get_env("SUPERSET_DASHBOARD_PERIODICAL_REFRESH_WARNING_MESSAGE")
 # ------------------------------------------------------
 
 # ------------------------------------------------------
