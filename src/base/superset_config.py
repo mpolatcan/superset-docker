@@ -1,7 +1,7 @@
 # Written by Mutlu Polatcan
 # 05.05.2020
 # -------------------------------------------------
-# TODO Write environment variables list to Markdown
+# TODO Write environment variables types and default values
 import json
 from os import environ
 from dateutil import tz
@@ -102,7 +102,7 @@ def get_db_or_broker_uri(env_var_prefix, default_prefixes, default_ports):
             username="{}{}".format(username, ":" if password else "@") if username else "",
             password="{}@".format(password) if password else "",
             host=get_env("{}_HOST".format(env_var_prefix)),
-            port=default_ports.get(type, None),
+            port=get_env("{}_PORT".format(env_var_prefix), default=default_ports.get(type, None)),
             db=get_env("{}_DATABASE".format(env_var_prefix))
         )
     except Exception:
@@ -120,7 +120,7 @@ def get_cache_config(env_var_prefix):
 
     for cache_config_info in [("TYPE", "null", str), ("NO_NULL_WARNING", bool), ("DEFAULT_TIMEOUT", int),
                               ("THRESHOLD", int), ("KEY_PREFIX", str), ("MEMCACHED_SERVERS", str),
-                              ("MEMCACHED_SERVERS", str), ("MEMCACHED_PASSWORD", str), ("REDIS_HOST", str),
+                              ("MEMCACHED_PASSWORD", str), ("REDIS_HOST", str),
                               ("REDIS_PORT", 6379, int), ("REDIS_PASSWORD", str), ("REDIS_DB", 0, int), ("DIR", str)]:
         set_config(
             config_dict=cache_config,
